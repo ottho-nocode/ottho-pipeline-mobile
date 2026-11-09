@@ -1,0 +1,12 @@
+{
+  "name": "ottho-pipeline-mobile",
+  "version": "1.0.0",
+  "description": "Ottho Builder Mobile : la vue locale du parcours mobile Ottho (34 étapes, de l'idée à l'application publiée sur l'App Store et Google Play). Elle s'ouvre à côté du terminal au démarrage de Claude Code dans un projet du parcours, montre l'étape courante, les preuves, les blocages et le prompt à coller, et n'écrit rien dans le dépôt du parcours.",
+  "author": {
+    "name": "Ottho",
+    "url": "https://ottho.co"
+  },
+  "homepage": "https://ottho.co",
+  "license": "MIT",
+  "keywords": ["ottho", "mobile", "expo", "parcours", "app-store", "google-play", "builder"]
+}
