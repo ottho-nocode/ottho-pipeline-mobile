@@ -26,11 +26,15 @@ double.
 
 ## Lancer
 
-Installe le plugin une fois, dans Claude Code :
+Installe le plugin une fois, dans ton terminal :
 
 ```bash
-/plugin install ottho-pipeline-mobile
+claude plugin marketplace add ottho-nocode/ottho-pipeline-mobile
+claude plugin install ottho-pipeline-mobile@ottho-pipeline-mobile
 ```
+
+Dans Claude Code, les mêmes commandes s'écrivent `/plugin marketplace add ottho-nocode/ottho-pipeline-mobile`
+puis `/plugin install ottho-pipeline-mobile@ottho-pipeline-mobile`.
 
 Ensuite, rien à lancer à la main : quand Claude Code démarre dans un projet du parcours (un dossier
 qui contient `scripts/ottho-parcours.mjs`, `ottho.json` ou `.agents/skills/ottho/SKILL.md`), le

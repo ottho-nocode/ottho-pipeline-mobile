@@ -1,0 +1,22 @@
+{
+  "name": "ottho-pipeline-mobile",
+  "metadata": {
+    "description": "Marketplace officiel du plugin ottho-pipeline-mobile (Ottho Builder Mobile, la vue du parcours mobile Ottho)."
+  },
+  "owner": {
+    "name": "Ottho",
+    "url": "https://ottho.co"
+  },
+  "plugins": [
+    {
+      "name": "ottho-pipeline-mobile",
+      "source": "./",
+      "description": "Ottho Builder Mobile : la vue locale du parcours mobile Ottho, 34 étapes de l'idée à l'application publiée sur l'App Store et Google Play. S'ouvre à côté du terminal au démarrage de Claude Code dans un projet du parcours, montre le chemin en cinq actes, l'étape courante, les preuves, les blocages, les étapes écartées, ce que la fabrication Expo embarquera, et le prompt à coller. N'écrit rien dans le dépôt du parcours.",
+      "author": {
+        "name": "Ottho",
+        "url": "https://ottho.co"
+      },
+      "keywords": ["ottho", "mobile", "expo", "parcours", "app-store", "google-play", "builder"]
+    }
+  ]
+}
