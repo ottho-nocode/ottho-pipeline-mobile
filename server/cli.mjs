@@ -11,7 +11,6 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { APP_ID, startApp } from "./app.mjs";
-import { eventsPath, rotateIfNeeded } from "./events.mjs";
 
 export const BASE_PORT = 4337;
 export const PORT_COUNT = 10;
@@ -86,7 +85,8 @@ export async function main(argv, { cwd = process.cwd(), log = console.log } = {}
     );
   }
   const distDir = fileURLToPath(new URL("../dist/", import.meta.url));
-  await rotateIfNeeded(eventsPath(opts.projectDir));
+  // Le journal des agents (.claude/pipeline-events.jsonl) n'est ni écrit ni tronqué ici : il
+  // appartient au plugin qui le produit. Ce Builder ne touche pas au dépôt qu'il observe.
 
   for (let port = opts.port; port < opts.port + PORT_COUNT; port++) {
     const found = await probe(port);
