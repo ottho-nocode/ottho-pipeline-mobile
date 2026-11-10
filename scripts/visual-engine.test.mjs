@@ -238,7 +238,7 @@ test("engineOf, pluginRootOf, parsePorts, shellQuote", async (t) => {
   assert.deepEqual(engineOf(ctx.env), { node: process.execPath, cli: ctx.cli });
   assert.equal(engineOf({ OTTHO_PARCOURS_CLI: join(ctx.root, "absent.mjs") }), null);
   // Le Builder livré avec ce plugin existe bien à sa place.
-  assert.deepEqual(engineOf({}, PLUGIN), { node: process.execPath, cli: join(PLUGIN, "bin", "cli.mjs") });
+  assert.deepEqual(engineOf({}, PLUGIN), { node: process.execPath, cli: join(PLUGIN, "builder", "bin", "cli.mjs") });
   assert.equal(pluginRootOf({ CLAUDE_PLUGIN_ROOT: "/p" }), "/p");
   assert.deepEqual(parsePorts("4600-4602"), [4600, 4601, 4602]);
   assert.deepEqual(parsePorts("4600,4602"), [4600, 4602]);

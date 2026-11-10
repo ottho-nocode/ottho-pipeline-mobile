@@ -45,7 +45,7 @@ fermeture de son dernier onglet. Depuis Claude Code, `/parcours` rouvre le navig
 À la main, dans le dossier du projet :
 
 ```bash
-node bin/cli.mjs --project /chemin/vers/le/parcours --no-open
+node builder/bin/cli.mjs --project /chemin/vers/le/parcours --no-open
 ```
 
 Options : `--project <dossier>`, `--port 4337`, `--no-open`, `--reopen`, `--idle-exit <minutes>`,
@@ -53,7 +53,7 @@ Options : `--project <dossier>`, `--port 4337`, `--no-open`, `--reopen`, `--idle
 Builder web, lui, occupe 4317 à 4326 : les deux ne se gênent pas.
 
 ```bash
-node bin/cli.mjs --project /chemin/vers/le/parcours --reopen
+node builder/bin/cli.mjs --project /chemin/vers/le/parcours --reopen
 ```
 
 `--reopen` ne lance rien : il retrouve le Builder du projet et rouvre le navigateur.
@@ -71,15 +71,25 @@ d'autre n'a été écrit sur ta machine : ni dossier personnel, ni réglage glob
 
 ## Développer
 
+Le dépôt est le plugin ; le Builder vit dans `builder/`, avec son propre `package.json`. Il n'y a
+volontairement **pas de `package.json` à la racine** : Claude Code lancerait un `npm install` à
+l'installation du plugin et embarquerait 100 Mo de dépendances de développement inutiles.
+
 ```bash
-npm install
-npm test                      # tests serveur et plugin (node:test)
+node --test                   # hook du plugin (scripts/) et serveur du Builder (builder/server/)
+```
+
+```bash
+cd builder && npm install
 npm run demo                  # crée un projet de parcours de démo et affiche son chemin
 node bin/cli.mjs --project <chemin-demo> --no-open   # API sur :4337
 npm run dev:web               # interface sur :3100 (proxy /api vers :4337)
 npm run typecheck             # types de l'interface
 npm run test:e2e              # build + test Playwright
 ```
+
+Le plugin livre l'interface déjà construite : après une modification de `builder/web/`, lance
+`npm run build` dans `builder/` et committe `builder/dist/` avec elle.
 
 ### Ce que le Builder lit, et où
 

@@ -33,4 +33,4 @@ Ottho Builder Mobile est une app locale, en lecture seule : les 34 étapes du pa
 
 - La vue ne fait que lire `ottho.json`. L'avancement du parcours s'enregistre dans ce terminal, avec `scripts/ottho-state.mjs`, comme le demande la skill de l'étape en cours.
 - Ne décris pas à la personne ce qu'elle voit déjà dans la vue : elle l'a sous les yeux, à côté de son terminal.
-- Ne lance pas le Builder autrement (pas de `node …/bin/cli.mjs` en tâche de fond de cette session) : la commande ci-dessus le détache proprement.
+- Ne lance pas le Builder autrement (pas de `node …/builder/bin/cli.mjs` en tâche de fond de cette session) : la commande ci-dessus le détache proprement.

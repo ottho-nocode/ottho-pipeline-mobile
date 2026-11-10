@@ -13,7 +13,7 @@
 //   source compact ou clear : lancé avec --no-open (pas de navigateur en pleine session).
 //   Session Claude Code (session_id du message) inscrite auprès du Builder (?session= du health,
 //   --session au lancement) : il s'arrête quand la dernière session inscrite se ferme.
-//   Builder : inclus dans le plugin, <plugin>/bin/cli.mjs, lancé par le node qui exécute ce hook
+//   Builder : inclus dans le plugin, <plugin>/builder/bin/cli.mjs, lancé par le node qui exécute ce hook
 //   (plugin : CLAUDE_PLUGIN_ROOT, sinon le dossier parent de scripts/). OTTHO_PARCOURS_CLI le
 //   remplace (tests).
 //   Sortie : systemMessage (adresse, pour l'utilisateur), additionalContext (pour Claude).
@@ -43,7 +43,7 @@ export const APP_LABEL = "Ottho Builder Mobile";
 // part d'un dépôt déjà cloné, jamais d'un dossier neuf.
 const MARKERS = ["scripts/ottho-parcours.mjs", "ottho.json", ".agents/skills/ottho/SKILL.md"];
 
-export const NOT_FOUND = "Ottho Builder Mobile absent du plugin ottho-pipeline-mobile (bin/cli.mjs introuvable) : le plugin est incomplet, mets-le à jour ou réinstalle-le.";
+export const NOT_FOUND = "Ottho Builder Mobile absent du plugin ottho-pipeline-mobile (builder/bin/cli.mjs introuvable) : le plugin est incomplet, mets-le à jour ou réinstalle-le.";
 export const NOT_STARTED = "Ottho Builder Mobile n'a pas démarré : voir .claude/ottho-parcours.log.";
 export const STARTING = "Ottho Builder Mobile démarre encore : il s'ouvrira dans le navigateur (sinon voir .claude/ottho-parcours.log).";
 export const STARTING_NO_OPEN = "Ottho Builder Mobile démarre encore : /parcours l'ouvrira dans le navigateur (sinon voir .claude/ottho-parcours.log).";
@@ -81,9 +81,9 @@ export function estProjetParcours(dir, env = process.env) {
 export const pluginRootOf = (env) => resolve(env.CLAUDE_PLUGIN_ROOT || PLUGIN_ROOT);
 
 // Builder à lancer : { node, cli } ou null (plugin incomplet). Celui du plugin
-// (<plugin>/bin/cli.mjs), ou OTTHO_PARCOURS_CLI (tests) ; node : celui qui exécute ce hook.
+// (<plugin>/builder/bin/cli.mjs), ou OTTHO_PARCOURS_CLI (tests) ; node : celui qui exécute ce hook.
 export function engineOf(env, pluginRoot = pluginRootOf(env)) {
-  const cli = env.OTTHO_PARCOURS_CLI || join(pluginRoot, "bin", "cli.mjs");
+  const cli = env.OTTHO_PARCOURS_CLI || join(pluginRoot, "builder", "bin", "cli.mjs");
   return isFile(cli) ? { node: process.execPath, cli: resolve(cli) } : null;
 }
 

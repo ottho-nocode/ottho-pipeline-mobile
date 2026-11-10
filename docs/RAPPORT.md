@@ -11,7 +11,7 @@ Date : 2026-11-10. Dépôt : `~/ottho-pipeline-mobile`, deux commits sur `main`.
 **Le critère de fin du brief est tenu.** Vérifié sur le vrai dépôt, branche `feat/backend-supabase-p1` :
 
 ```
-node bin/cli.mjs --project ~/Downloads/ottho-builder-mobile --no-open
+node builder/bin/cli.mjs --project ~/Downloads/ottho-builder-mobile --no-open
 ```
 
 sert l'app sur `http://127.0.0.1:4337` et affiche :
