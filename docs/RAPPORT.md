@@ -103,6 +103,7 @@ qu'il était avant.
   web (`windowsHide`, `O_NOFOLLOW` absent sous Windows), sans exécution sur ces systèmes.
 - **Un parcours arrivé au bout.** L'état « Parcours terminé » est couvert par un test unitaire, pas
   par un vrai projet publié sur les deux magasins.
-- **Les valeurs du modèle.** La détection de l'héritage Expo compare à une liste figée (`NowStack`,
-  `nowstack`, `mobile.aiblueprint.dev`, `dev.melvynx.nowstack`, l'équipe Apple et le projet EAS du
-  modèle). Si le modèle du parcours change, cette liste est à mettre à jour.
+- **Les valeurs du modèle.** La détection de l'héritage Expo lit les motifs dans le détecteur du
+  dépôt du parcours (`scripts/ottho-heritage.mjs`, tableau `HERITAGE_PATTERNS`), qui en est la
+  source unique : aucune valeur du modèle n'est recopiée dans ce Builder. Le fichier est lu en
+  texte, jamais exécuté. Un projet sans ce fichier ne fait signaler que le gabarit `xxxxxxxx`.

@@ -2,14 +2,23 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { estHeritee, lireChamp, readExpo } from "./expo.mjs";
+import { estHeritee, lireChamp, lireMotifs, readExpo } from "./expo.mjs";
 import { tempDir } from "./tmpdirs.mjs";
+
+// Le détecteur du projet est la seule source des valeurs du modèle. Celles-ci sont inventées : le
+// Builder ne porte dans son code ni le nom ni les identifiants de l'auteur d'un modèle réel.
+const DETECTEUR = `export const HERITAGE_PATTERNS = [
+  { "id": "marque", "pattern": "Modele Mobile" },
+  { "id": "identifiant-app", "pattern": "mobile.modele-exemple.dev" },
+  { "id": "slug-modele", "pattern": "modele-mobile" },
+];
+`;
 
 const SITE = `export const SiteConfig = {
   title: "Mon salon",
   description: "Reservation avec caution",
-  slug: 'nowstack',
-  bundleId: "mobile.aiblueprint.dev",
+  slug: 'modele-mobile',
+  bundleId: "mobile.modele-exemple.dev",
   androidPackage: "com.monsalon.app",
   appleTeamId: "AB12CD34EF",
   easProjectId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
@@ -23,9 +32,13 @@ const EAS = JSON.stringify({
   build: { base: { node: "22.20.0" }, development: {}, preview: {}, production: {} },
 });
 
-async function projet({ site = SITE, eas = EAS } = {}) {
+async function projet({ site = SITE, eas = EAS, detecteur = DETECTEUR } = {}) {
   const dir = await tempDir("opm-expo-");
   if (site !== null) await writeFile(join(dir, "site-config.ts"), site);
+  if (detecteur !== null) {
+    await mkdir(join(dir, "scripts"), { recursive: true });
+    await writeFile(join(dir, "scripts", "ottho-heritage.mjs"), detecteur);
+  }
   if (eas !== null) {
     await mkdir(join(dir, "mobile-app"), { recursive: true });
     await writeFile(join(dir, "mobile-app", "eas.json"), eas);
@@ -35,19 +48,31 @@ async function projet({ site = SITE, eas = EAS } = {}) {
 
 test("lireChamp : guillemets doubles, simples, et clé absente", () => {
   assert.equal(lireChamp(SITE, "title"), "Mon salon");
-  assert.equal(lireChamp(SITE, "slug"), "nowstack");
+  assert.equal(lireChamp(SITE, "slug"), "modele-mobile");
   assert.equal(lireChamp(SITE, "absent"), null);
   assert.equal(lireChamp(null, "title"), null);
   // « version » ne doit pas être confondu avec une clé qui finit par le même mot.
   assert.equal(lireChamp('const x = { appVersion: "9.9.9", version: "1.2.0" };', "version"), "1.2.0");
 });
 
-test("estHeritee : valeurs du modèle et gabarit laissé en place", () => {
-  assert.equal(estHeritee("NowStack"), true);
-  assert.equal(estHeritee("dev.melvynx.nowstack"), true);
+test("lireMotifs : clé citée ou nue, motif trop court écarté, source absente", () => {
+  assert.deepEqual(lireMotifs(`[{ "pattern": "MonModele" }, { pattern: 'dev.mon.app' }]`), ["monmodele", "dev.mon.app"]);
+  assert.deepEqual(lireMotifs(`{ "pattern": "ab" }`), []);
+  assert.deepEqual(lireMotifs(null), []);
+});
+
+test("estHeritee : valeurs du modèle, casse ignorée, gabarit laissé en place", () => {
+  const motifs = lireMotifs(DETECTEUR);
+  assert.equal(estHeritee("Modele Mobile", motifs), true);
+  assert.equal(estHeritee("mobile.modele-exemple.dev", motifs), true);
+  // La casse ne doit pas faire manquer une valeur du modèle.
+  assert.equal(estHeritee("MODELE-MOBILE", motifs), true);
+  assert.equal(estHeritee("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", motifs), true);
+  assert.equal(estHeritee("Mon salon", motifs), false);
+  assert.equal(estHeritee(null, motifs), false);
+  // Sans motifs, aucune valeur du modèle n'est connue : seul le gabarit reste signalé.
+  assert.equal(estHeritee("mobile.modele-exemple.dev"), false);
   assert.equal(estHeritee("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"), true);
-  assert.equal(estHeritee("Mon salon"), false);
-  assert.equal(estHeritee(null), false);
 });
 
 test("readExpo : ce que la fabrication embarquera, et ce qui vient encore du modèle", async () => {
@@ -74,5 +99,9 @@ test("readExpo : projet EAS relié, eas.json cassé, et projet sans application 
   assert.equal(casse.versionSource, null);
   assert.equal(casse.champs.length, 7);
 
-  assert.deepEqual(await readExpo(await projet({ site: null, eas: null })), { present: false });
+  assert.deepEqual(await readExpo(await projet({ site: null, eas: null, detecteur: null })), { present: false });
+
+  // Projet sans détecteur d'héritage : plus de motifs du modèle, seul le gabarit est signalé.
+  const sansDetecteur = await readExpo(await projet({ detecteur: null }));
+  assert.deepEqual(sansDetecteur.heritage, ["easProjectId"]);
 });

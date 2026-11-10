@@ -99,6 +99,17 @@ node scripts/ottho-state.mjs complete ${etape.id} --proof "<preuve>"
 \`\`\`
 `;
 
+const DETECTEUR_DEMO = `// Detecteur d'heritage du projet de demonstration : les valeurs du modele dont part le parcours.
+// Le vrai depot en declare davantage ; ici le minimum pour que la vue ait quelque chose a signaler.
+export const HERITAGE_PATTERNS = [
+  { "id": "marque", "pattern": "Modele Mobile", "gravite": "majeur" },
+  { "id": "identifiant-app", "pattern": "mobile.modele-exemple.dev", "gravite": "bloquant" },
+  { "id": "package-android", "pattern": "dev.modele.exemple", "gravite": "bloquant" },
+  { "id": "equipe-apple", "pattern": "AAAA000000", "gravite": "bloquant" },
+  { "id": "slug-modele", "pattern": "modele-mobile", "gravite": "majeur" },
+];
+`;
+
 export async function createDemoProject(root) {
   const dir = root ?? (await mkdtemp(join(tmpdir(), "ottho-parcours-demo-")));
   const env = { ...process.env, GIT_AUTHOR_NAME: "demo", GIT_AUTHOR_EMAIL: "demo@local", GIT_COMMITTER_NAME: "demo", GIT_COMMITTER_EMAIL: "demo@local" };
@@ -158,15 +169,19 @@ export async function createDemoProject(root) {
 
   // L'application Expo : le nom est deja celui de la personne, les identifiants viennent encore du
   // modele. C'est ce que les etapes 09 et 10 corrigent, et ce qu'un build enverrait tel quel.
+  //
+  // Les valeurs du modele de demonstration sont inventees, et c'est le detecteur du projet qui les
+  // declare : aucune identite reelle, ni dans ce fixture ni dans le code du Builder.
+  await w("scripts/ottho-heritage.mjs", DETECTEUR_DEMO);
   await w(
     "site-config.ts",
     `export const SiteConfig = {
   title: "Mon salon",
   description: "Reservation avec caution",
-  slug: "nowstack",
-  bundleId: "mobile.aiblueprint.dev",
-  androidPackage: "dev.melvynx.nowstack",
-  appleTeamId: "UUFHFWGCU4",
+  slug: "modele-mobile",
+  bundleId: "mobile.modele-exemple.dev",
+  androidPackage: "dev.modele.exemple",
+  appleTeamId: "AAAA000000",
   easProjectId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   version: "1.0.0",
 };

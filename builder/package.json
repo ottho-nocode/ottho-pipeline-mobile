@@ -1,6 +1,6 @@
 {
   "name": "ottho-pipeline-mobile",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Ottho Builder Mobile : la vue locale du parcours mobile Ottho (34 étapes), incluse dans le plugin Claude Code ottho-pipeline-mobile (jamais publiée sur npm).",
   "type": "module",
