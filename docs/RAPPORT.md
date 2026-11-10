@@ -58,8 +58,11 @@ et `npm run build` au vert. Fixtures écrites dans un dossier temporaire jetable
 
 ## Ce qui reste
 
-- **Publier le plugin.** Il n'est référencé dans aucune marketplace : `/plugin install ottho-pipeline-mobile`
-  ne fonctionnera qu'une fois le dépôt poussé et déclaré. Rien n'a été poussé.
+- **Déclarer le plugin aux élèves.** Il est publié sur
+  `github.com/ottho-nocode/ottho-pipeline-mobile` et s'installe depuis son propre dépôt
+  (`claude plugin marketplace add ottho-nocode/ottho-pipeline-mobile`, puis
+  `claude plugin install ottho-pipeline-mobile@ottho-pipeline-mobile`). Reste à le faire connaître
+  là où les élèves le chercheront.
 - **Décider du sort du compagnon existant** (`~/ottho-builder-mobile`, branche `ottho-builder`,
   `scripts/ottho-compagnon.mjs`). Ses acquis sont repris ici, mais il vit toujours là-bas et le skill
   `/ottho` de cette branche le lance encore.
@@ -68,12 +71,30 @@ et `npm run build` au vert. Fixtures écrites dans un dossier temporaire jetable
 - **Aperçu de l'application et panneau de configuration** : hors périmètre, comme convenu. Un aperçu
   d'application Expo dans un navigateur n'est pas fiable, et le parcours a déjà `npm run expo-go`.
 
+## Vérifié après l'installation du plugin
+
+Le plugin a été installé pour de vrai (`scope: user`), puis ses deux hooks ont été invoqués comme
+Claude Code le fait, dans le dépôt du parcours :
+
+- `SessionStart` démarre le Builder détaché, écrit `.claude/ottho-parcours.log`, rend l'adresse à la
+  personne et le contexte à Claude ; la vue répond avec les vraies données du parcours ;
+- `SessionEnd` retire la session, et le Builder s'arrête seul après son délai de grâce.
+
+Deux manques que seule cette installation a révélés, corrigés depuis :
+
+1. **`builder/dist/` n'était pas versionné.** Le plugin installé n'embarquait pas l'interface
+   construite : le Builder démarrait et servait des 404. `dist/` est désormais suivi, comme dans
+   `ottho-code-app`.
+2. **Un `package.json` à la racine faisait installer 100 Mo.** Claude Code lance `npm install` à la
+   racine d'un plugin qui en a un, et embarquait toutes les dépendances de développement (Vite,
+   Playwright, React). Le Builder vit maintenant dans `builder/`, avec son propre `package.json` :
+   le plugin installé pèse 1,5 Mo.
+
+Le journal de test écrit dans le dépôt du parcours a été supprimé : `git status` y est redevenu ce
+qu'il était avant.
+
 ## Ce qui n'a pas pu être vérifié
 
-- **Le lancement automatique en conditions réelles.** Le hook `SessionStart` est couvert par 13 tests
-  (lancement détaché, arguments, verrou, lien symbolique, plugin incomplet, `--end`, `--open`), mais
-  je n'ai pas pu vérifier qu'une vraie session Claude Code ouverte dans le dépôt du parcours démarre
-  le Builder toute seule : le plugin n'est pas installé sur cette machine.
 - **La cohabitation avec le Builder web dans une même session.** Les marqueurs et les plages de
   ports sont disjoints (4337-4346 contre 4317-4326), et un test vérifie qu'un Builder web qui répond
   sur un port sondé n'est jamais pris pour le nôtre. La cohabitation réelle, avec les deux plugins
