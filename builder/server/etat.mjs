@@ -33,7 +33,6 @@ export const BRANCHES = [
   { key: "compte_utilisateur", label: "Comptes utilisateur" },
   { key: "paiement", label: "Paiement dans l'application" },
   { key: "contenu_partage", label: "Contenu partagé entre utilisateurs" },
-  { key: "supabase", label: "Backend Supabase" },
 ];
 
 /** Lecture brute du fichier. `exists` false : le parcours n'a pas encore commencé. */
@@ -124,14 +123,15 @@ export function choix(etat) {
   });
 }
 
-/** Le backend visé, comme le calcule le moteur du parcours. */
+/**
+ * Le backend visé, comme le calcule le moteur du parcours. Supabase est le seul :
+ * la seule question qui reste est de savoir si le projet existe déjà.
+ */
 export function backendActif(etat) {
-  if (etat?.branches?.supabase !== true) return "convex";
   return etat?.answers?.supabase_existant === "oui" ? "supabase-existant" : "supabase-nouveau";
 }
 
 const BACKEND_LABEL = {
-  convex: "Convex",
   "supabase-nouveau": "Supabase (projet à créer)",
   "supabase-existant": "Supabase (projet déjà en place)",
 };

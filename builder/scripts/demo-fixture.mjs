@@ -19,7 +19,7 @@ const DETAILS = {
   "03-ce-que-ca-coute": ["toujours", 10, "Le budget total, sans surprise"],
   "04-ta-machine": ["toujours", 60, "Installer les outils, verifier l'espace disque"],
   "05-ton-materiel": ["toujours", 15, "Verifier iPhone/Android, version minimale, ou emulateur"],
-  "06-tes-comptes": ["toujours", 90, "Convex, Expo, et les comptes developpeur"],
+  "06-tes-comptes": ["toujours", 120, "Supabase, Resend, Expo, et les comptes developpeur"],
   "07-compte-apple": ["ios", 120, "99 $/an, verification d'identite, contrats"],
   "08-compte-google": ["android", 90, "25 $, verification d'identite, enregistrement"],
   "09-ton-projet": ["toujours", 30, "Purger tout l'heritage de la boilerplate"],

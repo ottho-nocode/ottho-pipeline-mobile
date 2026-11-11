@@ -133,9 +133,9 @@ test("choix, backend, produit, réponses et historique : lisibles, sans rien inv
   assert.equal(parCle.android.reponse, "pas encore répondu");
   assert.equal(parCle.android.valeur, null);
 
-  assert.equal(backendActif(etatDemo), "convex");
-  assert.equal(backendActif({ branches: { supabase: true } }), "supabase-nouveau");
-  assert.equal(backendActif({ branches: { supabase: true }, answers: { supabase_existant: "oui" } }), "supabase-existant");
+  assert.equal(backendActif(etatDemo), "supabase-nouveau");
+  assert.equal(backendActif({}), "supabase-nouveau");
+  assert.equal(backendActif({ answers: { supabase_existant: "oui" } }), "supabase-existant");
 
   assert.equal(produit(etatDemo).nom, "app-coiffeur");
   assert.equal(produit({}).nom, null);
