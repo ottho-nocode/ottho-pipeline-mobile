@@ -6,20 +6,35 @@ product
 
 ## Users
 
-Les élèves du parcours mobile Ottho : des débutants complets, qui n'ont jamais ouvert un terminal et
-ne savent pas ce qu'est un backend. Ils veulent une application publiée, c'est tout. L'app s'ouvre
-d'elle-même sur leur ordinateur quand ils lancent Claude Code dans leur projet, à côté de leur
-terminal, souvent le soir ou le week-end, une étape par session. Leur travail : savoir où ils en
-sont dans les 34 étapes, ce qui les attend, ce qui les bloque, et quoi coller dans le terminal pour
-continuer.
+Deux publics, et une app qui montre à chacun la vue qui le concerne.
+
+**Les élèves du parcours mobile Ottho** : des débutants complets, qui n'ont jamais ouvert un
+terminal et ne savent pas ce qu'est un backend. Ils veulent une application publiée, c'est tout.
+L'app s'ouvre d'elle-même sur leur ordinateur quand ils lancent Claude Code dans leur projet, à côté
+de leur terminal, souvent le soir ou le week-end, une étape par session. Leur travail : savoir où
+ils en sont dans les 34 étapes, ce qui les attend, ce qui les bloque, et quoi coller dans le
+terminal pour continuer.
+
+**Les builders Ottho qui montent une application mobile pour un client** : le client a déjà une
+application web, des utilisateurs et une base Supabase. Ils lancent le pipeline d'agents pour
+construire l'application Expo qui s'y branche. Leur travail : savoir quelle user story avance, quel
+livrable attend leur validation, quelles tables n'ont pas encore leurs policies RLS vérifiées, et ce
+que la prochaine build embarquera.
 
 ## Product Purpose
 
 Nom : **Ottho Builder Mobile** (plugin et commande `ottho-pipeline-mobile`). Donner une forme
-visible à un parcours qui, sans elle, n'existe que dans un fichier JSON et dans le fil du terminal.
-L'app guide sans piloter : elle lit `ottho.json`, montre le chemin, et donne le prompt à coller ;
-réponses, preuves et avancement passent par Claude Code. Réussite : l'élève voit le chemin parcouru,
-sait quelle est son étape, et n'a jamais à se demander ce qu'il doit faire maintenant.
+visible à un travail qui, sans elle, n'existe que dans des fichiers et dans le fil du terminal.
+
+Pour le parcours : elle lit `ottho.json`, montre le chemin, et donne le prompt à coller ; réponses,
+preuves et avancement passent par Claude Code. Réussite : l'élève voit le chemin parcouru, sait
+quelle est son étape, et n'a jamais à se demander ce qu'il doit faire maintenant.
+
+Pour le pipeline : elle lit les livrables, Git et la base, montre les huit agents dans leurs cinq
+phases et l'avancement de chaque user story. Réussite : le builder voit ce qui attend sa validation,
+ce qui bloque la première build, et il n'a jamais à ouvrir un dossier pour le savoir.
+
+Dans les deux cas, l'app guide sans piloter.
 
 ## Brand Personality
 
@@ -43,7 +58,10 @@ chaleureux, maîtrisé. L'émotion visée : « j'avance sur un chemin, et je voi
 4. **Ce qui ne te concerne pas s'efface** : les étapes écartées par les réponses de l'élève sortent
    des totaux et descendent en bas de leur acte, avec la condition qui les ramènerait.
 5. **Rien ne s'écrit depuis l'app** : tout passe par le terminal, et l'app le dit plutôt que de le
-   laisser deviner.
+   laisser deviner. Dans le dépôt du parcours, elle n'écrit rien du tout ; en mode pipeline, ses
+   deux seules écritures sont `.env.local` et le lancement de l'aperçu, toutes deux demandées.
+6. **Un secret ne s'affiche jamais** : l'app montre « définie » ou non, l'adresse d'un projet, le
+   nom d'une variable. Jamais une valeur de clé, nulle part, même tronquée.
 
 ## Accessibility & Inclusion
 

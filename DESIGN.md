@@ -87,6 +87,29 @@ pastille et son mot (« faite », « en cours », « bloquée », « sautée »,
 - **Journal** : l'historique d'`ottho.json`, du plus récent au plus ancien, avec la pastille de
   l'état, la preuve ou la raison ; en tête, l'agent qui travaille, s'il y en a un.
 
+### La vue du pipeline
+
+La même coque et les mêmes jetons, posés sous `.is-pipeline` (`styles-pipeline.css`) : la vue du
+parcours ne reçoit rien de ces règles, même quand les deux emploient la même classe. Les styles sont
+copiés de ceux du pipeline web, dans le même ordre, pour qu'un diff entre les deux dépôts reste
+lisible.
+
+- **Le graphe** : cinq colonnes numérotées 01 à 05 (Specify, Plan, Implement, Validate, Release), une
+  carte par agent, les passages de main tracés d'une carte à l'autre. Une carte porte le robot de
+  son agent, son nom, son modèle, ses outils, ses services, et sa pastille d'état. Release est une
+  colonne comme les autres : la soumission est séquentielle, pas transverse.
+- **La table des features** : une ligne par user story, six colonnes (Spec, Plan, Code, Review,
+  Validation, Merge). Chaque cellule porte son état en toutes lettres dans son `aria-label`
+  (« Validation : fait »), jamais la couleur seule. La colonne Validation est tenue par
+  `validateur`, et ce qu'elle montre vient de la preuve cochée par le client.
+- **Base de données** (colonne de gauche) : l'adresse du projet existant, l'état de chaque clé
+  (« définie », jamais sa valeur), le relevé du schéma avec une ligne par table et sa RLS vérifiée ou
+  non, les migrations en attente. Une clé secrète à portée du bundle s'affiche en alerte, en tête du
+  panneau : elle serait extractible du binaire livré sur les stores.
+- **Ta fabrication** (colonne de gauche, avec `soumission`) : le même panneau que dans la vue du
+  parcours, sans la notion de valeur héritée, qui n'a pas de sens sans modèle derrière. Restent les
+  champs Expo, les profils `eas.json` et le lien vers le projet EAS.
+
 ## Motion
 
 150 à 250 ms, courbe ease-out (`--ease`). Les barres d'avancement glissent, le reste ne bouge pas au
