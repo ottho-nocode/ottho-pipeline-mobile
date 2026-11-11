@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { APP_ID, buildState, resolveStatic, startApp } from "./app.mjs";
+import { APP_ID, buildState, detectMode, resolveStatic, startApp } from "./app.mjs";
 import { tempDir } from "./tmpdirs.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -244,4 +244,115 @@ test("fin de session : refusée à une page (Origin), sans JSON, ou en GET", asy
   assert.equal((await (await endSession(app.port, { project: `${dir}-autre`, session: "s1" })).json()).ended, false);
   await sleep(200);
   assert.equal(calls, 0);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Mode pipeline : un projet qui n'est pas un projet du parcours. Mêmes routes que le pipeline web,
+// plus le panneau de base et le panneau de version.
+// ---------------------------------------------------------------------------------------------
+
+async function pipelineFixture() {
+  const dir = await tempDir("opm-pipe-");
+  for (const d of ["specs", "plans", "docs", "design"]) await mkdir(join(dir, d), { recursive: true });
+  await writeFile(join(dir, "specs", "US-01-connexion.md"), "# US-01 — Connexion\n\n## Historique\n\n- 2026-11-10 : écrite\n");
+  await writeFile(join(dir, "plans", "US-01-connexion.md"), "# Plan US-01\n");
+  await writeFile(join(dir, "docs", "base.md"), "## Tables lues par l'application\n\n- [x] profiles\n- [ ] entitlements\n");
+  await writeFile(join(dir, ".env.local"), "EXPO_PUBLIC_SUPABASE_URL=https://eeeeeeeeeeeeeeeeeeee.supabase.co\n");
+  await writeFile(join(dir, "README.md"), "# Projet pipeline\n");
+  return dir;
+}
+
+test("detectMode : le parcours à ses marques, tout autre projet au pipeline", async () => {
+  assert.equal(await detectMode(await fixture()), "parcours");
+  assert.equal(await detectMode(await pipelineFixture()), "pipeline");
+  // Dossier vide : pipeline (sans cette garde, les 34 étapes s'afficheraient sur n'importe quel projet).
+  assert.equal(await detectMode(await tempDir("opm-vide-")), "pipeline");
+});
+
+test("buildState pipeline : agents, features, livrables, base existante, Expo", async () => {
+  const dir = await pipelineFixture();
+  const plugin = await tempDir("opm-plugin-");
+  await mkdir(join(plugin, "agents"), { recursive: true });
+  for (const name of ["brainstorming", "spec-writer", "designer", "architect", "developer", "code-reviewer", "validateur", "soumission"]) {
+    await writeFile(join(plugin, "agents", `${name}.md`), `---\nname: ${name}\n---\nCorps\n`);
+  }
+  const state = await buildState({ projectDir: dir, pluginDir: plugin, claudeConfigPath: join(dir, "absent.json") });
+  assert.equal(state.mode, "pipeline");
+  assert.equal(state.app, APP_ID);
+  // Les huit agents, rangés dans les cinq phases du pipeline mobile.
+  assert.deepEqual(
+    state.agents.map((a) => [a.name, a.phase]),
+    [
+      ["architect", "plan"],
+      ["brainstorming", "specify"],
+      ["code-reviewer", "validate"],
+      ["designer", "specify"],
+      ["developer", "implement"],
+      ["soumission", "release"],
+      ["spec-writer", "specify"],
+      ["validateur", "validate"],
+    ],
+  );
+  assert.deepEqual(state.features.map((f) => f.us), ["US-01"]);
+  assert.equal(state.features[0].title, "Connexion");
+  assert.deepEqual(state.deliverables.map((d) => d.agent), ["spec-writer", "architect"]);
+  // Base existante : son adresse, le relevé de son schéma, aucune valeur de clé.
+  assert.equal(state.database.app.project, "eeeeeeeeeeeeeeeeeeee");
+  assert.deepEqual(state.database.unchecked, ["entitlements"]);
+  assert.equal(state.phase.stages.find((s) => s.key === "base").state, "done");
+  // Le panneau de version : pas d'application Expo dans cette fixture.
+  assert.deepEqual(state.expo, { present: false });
+  // Aucun champ de la vue du parcours ne traîne dans l'état du pipeline.
+  assert.equal("etapes" in state, false);
+  assert.equal("avancement" in state, false);
+});
+
+test("API pipeline : livrables, base, config et aperçu ; le jeton d'écriture et l'Origine exigés", async (t) => {
+  const dir = await pipelineFixture();
+  const app = await startApp({ projectDir: dir, pluginDir: null, distDir: dir, port: 0, claudeConfigPath: join(dir, "absent.json") });
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.port}`;
+  assert.equal(app.mode, "pipeline");
+
+  const state = await (await fetch(`${base}/api/state`)).json();
+  assert.match(state.writeToken, /^[0-9a-f]{48}$/);
+  assert.equal("readToken" in state, false);
+  assert.equal(state.preview.status, "idle");
+
+  // Livrable d'une feature, lu sans jeton (aucun chemin ne vient du navigateur).
+  const read = await (await fetch(`${base}/api/deliverable?us=US-01&agent=spec-writer`)).json();
+  assert.equal(read.file, "specs/US-01-connexion.md");
+  assert.equal((await fetch(`${base}/api/deliverable?us=US-01&agent=developer`)).status, 400);
+
+  // Configuration des services : jeton exigé en lecture, Origine + jeton en écriture.
+  assert.equal((await fetch(`${base}/api/config?token=faux`)).status, 403);
+  const config = await (await fetch(`${base}/api/config?token=${encodeURIComponent(state.writeToken)}`)).json();
+  assert.deepEqual(config.services.map((s) => s.key), ["supabase", "revenuecat", "posthog"]);
+  const post = (path, token, origin = base, body = {}) =>
+    fetch(`${base}${path}`, { method: "POST", headers: { "Content-Type": "application/json", Origin: origin, "X-Ottho-Token": token }, body: JSON.stringify(body) });
+  assert.equal((await post("/api/config", "faux", base, { values: { EXPO_PUBLIC_X: "1" } })).status, 403);
+  assert.equal((await post("/api/config", state.writeToken, "https://evil.example", { values: { EXPO_PUBLIC_X: "1" } })).status, 403);
+  assert.equal((await post("/api/config", state.writeToken, base, { values: { EXPO_PUBLIC_X: "1" } })).status, 200);
+  assert.equal((await fetch(`${base}/api/config`, { method: "PUT" })).status, 405);
+
+  // La fiche d'étape du parcours n'existe pas dans ce mode.
+  assert.equal((await fetch(`${base}/api/skill?id=04-ta-machine&token=${encodeURIComponent(state.writeToken)}`)).status, 404);
+});
+
+test("API parcours : ni écriture, ni livrable, ni aperçu (le Builder ne touche pas au dépôt du parcours)", async (t) => {
+  const dir = await fixture();
+  const app = await startApp({ projectDir: dir, distDir: dir, port: 0 });
+  t.after(() => app.close());
+  const base = `http://127.0.0.1:${app.port}`;
+  assert.equal(app.mode, "parcours");
+  const state = await (await fetch(`${base}/api/state`)).json();
+  assert.equal(state.mode, "parcours");
+  assert.equal("writeToken" in state, false);
+  for (const path of ["/api/deliverable?us=US-01&agent=spec-writer", "/api/brief", "/api/design-preview?path=design/x.html", "/api/design-file?path=design/x.png"]) {
+    assert.equal((await fetch(`${base}${path}`)).status, 404, path);
+  }
+  for (const path of ["/api/config", "/api/preview/start", "/api/preview/stop"]) {
+    const res = await fetch(`${base}${path}`, { method: "POST", headers: { "Content-Type": "application/json", Origin: base }, body: "{}" });
+    assert.equal(res.status, 404, path);
+  }
 });

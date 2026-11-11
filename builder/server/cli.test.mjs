@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { APP_NAME, BASE_PORT, main, probe, resolveOptions } from "./cli.mjs";
 import { tempDir } from "./tmpdirs.mjs";
@@ -14,12 +14,13 @@ async function projet(prefix = "opm-cli-") {
 
 test("resolveOptions : valeurs par défaut, port 4337 (jamais celui du Builder web)", () => {
   assert.equal(BASE_PORT, 4337);
-  assert.deepEqual(resolveOptions([], "/p"), { projectDir: "/p", port: 4337, open: true, reopen: false, idleExitMs: null, sessions: [] });
+  assert.deepEqual(resolveOptions([], "/p"), { projectDir: "/p", pluginDir: undefined, port: 4337, open: true, reopen: false, idleExitMs: null, sessions: [] });
 });
 
 test("resolveOptions : toutes les options", () => {
-  assert.deepEqual(resolveOptions(["--project", "app", "--port", "5000", "--no-open", "--reopen", "--idle-exit", "30", "--session", "abc-123"], "/p"), {
+  assert.deepEqual(resolveOptions(["--project", "app", "--plugin", "p", "--port", "5000", "--no-open", "--reopen", "--idle-exit", "30", "--session", "abc-123"], "/p"), {
     projectDir: "/p/app",
+    pluginDir: "/p/p",
     port: 5000,
     open: false,
     reopen: true,
@@ -28,11 +29,36 @@ test("resolveOptions : toutes les options", () => {
   });
 });
 
-test("resolveOptions : options du Builder web refusées, port et idle-exit invalides expliqués", () => {
-  // --plugin et la sous-commande brief appartiennent au Builder web : ici, elles n'existent pas.
-  assert.throws(() => resolveOptions(["--plugin", "/x"], "/p"), /plugin/);
+test("resolveOptions : option inconnue refusée, port et idle-exit invalides expliqués", () => {
+  assert.throws(() => resolveOptions(["--inconnue", "/x"], "/p"));
   assert.throws(() => resolveOptions(["--port", "abc"], "/p"), /port/);
   for (const bad of ["0", "-5", "abc", ""]) assert.throws(() => resolveOptions(["--idle-exit", bad], "/p"), /idle-exit/, bad);
+});
+
+test("main : le mode est choisi d'après le projet, et rien ne s'écrit dans le dépôt du parcours", async (t) => {
+  const parcours = await projet();
+  const vueParcours = await main(["--project", parcours, "--port", "4396", "--no-open"], { log: () => {} });
+  t.after(() => vueParcours.close());
+  assert.equal(vueParcours.mode, "parcours");
+  // Un projet quelconque ouvre le pipeline d'agents.
+  const pipeline = await main(["--project", await tempDir("opm-pipe-cli-"), "--port", "4397", "--no-open"], { log: () => {} });
+  t.after(() => pipeline.close());
+  assert.equal(pipeline.mode, "pipeline");
+});
+
+test("brief : refusée sur un projet du parcours (son cadrage vit dans ses étapes)", async () => {
+  const parcours = await projet();
+  await assert.rejects(main(["brief", "--project", parcours, "--json", "x.json"], { log: () => {} }), /projet du parcours/);
+});
+
+test("brief : écrit docs/brief.md d'un projet du pipeline depuis un JSON", async () => {
+  const dir = await tempDir("opm-brief-");
+  const data = join(dir, "brief.json");
+  await writeFile(data, JSON.stringify({ name: "Suivi de chantier", domaine: { domaine: "BTP" } }));
+  const logs = [];
+  assert.equal(await main(["brief", "--project", dir, "--json", data], { log: (m) => logs.push(m) }), null);
+  assert.match(logs.at(-1), /brief\.md écrit \(incomplet/);
+  assert.match(await readFile(join(dir, "docs", "brief.md"), "utf8"), /Suivi de chantier/);
 });
 
 test("probe : port libre, et port tenu par autre chose que nous", async (t) => {
