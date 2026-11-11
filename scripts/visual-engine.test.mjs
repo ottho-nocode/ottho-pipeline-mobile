@@ -7,7 +7,7 @@ import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APP_LABEL, NOT_FOUND, NOT_STARTED, PORTS, UNSAFE, engineOf, estProjetParcours, main, parsePorts, pluginRootOf, shellQuote } from "./visual-engine.mjs";
+import { APP_LABEL, NOT_FOUND, NOT_STARTED, PORTS, UNSAFE, contextFor, engineOf, estProjetMobile, estProjetParcours, estProjetPipeline, main, parsePorts, pluginRootOf, shellQuote } from "./visual-engine.mjs";
 
 const SCRIPT = fileURLToPath(new URL("./visual-engine.mjs", import.meta.url));
 const PLUGIN = dirname(dirname(SCRIPT));
@@ -244,4 +244,41 @@ test("engineOf, pluginRootOf, parsePorts, shellQuote", async (t) => {
   assert.deepEqual(parsePorts("4600,4602"), [4600, 4602]);
   assert.equal(parsePorts("abc"), null);
   assert.equal(shellQuote("a'b"), "'a'\\''b'");
+});
+
+test("estProjetPipeline : l'application Expo, jamais un projet du parcours ni les marqueurs du pipeline web", async (t) => {
+  const ctx = await setup(t, { files: {} });
+  const env = { HOME: ctx.root };
+  assert.equal(estProjetPipeline(ctx.dir, env), false);
+  // Marqueurs du pipeline web : sans effet, les deux Builders ne se marchent pas dessus.
+  await mkdir(join(ctx.dir, "docs"), { recursive: true });
+  await writeFile(join(ctx.dir, "docs", "PRD.md"), "# PRD");
+  assert.equal(estProjetPipeline(ctx.dir, env), false);
+
+  for (const marqueur of ["mobile-app/app.config.ts", "mobile-app/app.json", "mobile-app/eas.json"]) {
+    const dir = join(ctx.root, `pipe-${marqueur.replace(/\W/g, "-")}`);
+    await mkdir(join(dir, dirname(marqueur)), { recursive: true });
+    await writeFile(join(dir, marqueur), "x");
+    assert.equal(estProjetPipeline(dir, env), true, marqueur);
+    assert.equal(estProjetMobile(dir, env), true, marqueur);
+  }
+
+  // Un projet du parcours a aussi une application Expo : il reste un projet du parcours.
+  const parcours = join(ctx.root, "p-parcours");
+  await mkdir(join(parcours, "mobile-app"), { recursive: true });
+  await writeFile(join(parcours, "mobile-app", "eas.json"), "{}");
+  await writeFile(join(parcours, "ottho.json"), "{}");
+  assert.equal(estProjetPipeline(parcours, env), false);
+  assert.equal(estProjetParcours(parcours, env), true);
+  assert.equal(estProjetMobile(parcours, env), true);
+});
+
+test("contextFor : dit à Claude laquelle des deux vues la personne a sous les yeux", () => {
+  const parcours = contextFor({ url: "http://127.0.0.1:4337", dir: "/p", pluginRoot: "/plug" });
+  assert.match(parcours, /vue du parcours/);
+  assert.match(parcours, /\/parcours/);
+  const pipeline = contextFor({ url: "http://127.0.0.1:4337", dir: "/p", pluginRoot: "/plug", mode: "pipeline" });
+  assert.match(pipeline, /pipeline d'agents mobile/);
+  assert.match(pipeline, /Specify, Plan, Implement, Validate, Release/);
+  assert.match(pipeline, /\/pipeline/);
 });

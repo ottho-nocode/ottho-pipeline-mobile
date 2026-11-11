@@ -42,6 +42,17 @@ export const APP_LABEL = "Ottho Builder Mobile";
 // Aucun n'est un marqueur du Builder web, et un dossier vide n'en est pas un : le parcours mobile
 // part d'un dépôt déjà cloné, jamais d'un dossier neuf.
 const MARKERS = ["scripts/ottho-parcours.mjs", "ottho.json", ".agents/skills/ottho/SKILL.md"];
+// Fichiers qui signent un projet du pipeline d'agents mobile : son application Expo. Un projet du
+// pipeline web n'a pas de `mobile-app/`, et les marqueurs du pipeline web (docs/brief.md,
+// docs/PRD.md, design/charte.md) n'en sont pas : les deux Builders ne se marchent pas dessus, même
+// quand les deux plugins sont installés. Avant que l'application Expo existe (phases Specify et
+// Plan), la commande /pipeline ouvre la vue à la demande.
+const MARQUEURS_PIPELINE = [
+  "mobile-app/app.config.ts",
+  "mobile-app/app.config.js",
+  "mobile-app/app.json",
+  "mobile-app/eas.json",
+];
 
 export const NOT_FOUND = "Ottho Builder Mobile absent du plugin ottho-pipeline-mobile (builder/bin/cli.mjs introuvable) : le plugin est incomplet, mets-le à jour ou réinstalle-le.";
 export const NOT_STARTED = "Ottho Builder Mobile n'a pas démarré : voir .claude/ottho-parcours.log.";
@@ -76,6 +87,16 @@ export function estProjetParcours(dir, env = process.env) {
   if (isHome(dir, env)) return false;
   return MARKERS.some((m) => isFile(join(dir, m)));
 }
+
+// Projet du pipeline d'agents mobile : une application Expo, et jamais un projet du parcours (qui en
+// a une aussi, mais que estProjetParcours capte déjà) ni le dossier personnel.
+export function estProjetPipeline(dir, env = process.env) {
+  if (isHome(dir, env) || estProjetParcours(dir, env)) return false;
+  return MARQUEURS_PIPELINE.some((m) => isFile(join(dir, m)));
+}
+
+// Projet que ce Builder sait montrer, dans l'un ou l'autre de ses deux modes.
+export const estProjetMobile = (dir, env = process.env) => estProjetParcours(dir, env) || estProjetPipeline(dir, env);
 
 // Dossier du plugin : CLAUDE_PLUGIN_ROOT (fourni par Claude Code), sinon celui de ce script.
 export const pluginRootOf = (env) => resolve(env.CLAUDE_PLUGIN_ROOT || PLUGIN_ROOT);
@@ -291,12 +312,17 @@ export function openBrowser(url) {
 // Argument shell POSIX : entre apostrophes, chaque apostrophe écrite '\''.
 export const shellQuote = (s) => `'${String(s).replace(/'/g, "'\\''")}'`;
 
-export function contextFor({ url, dir, pluginRoot }) {
+export function contextFor({ url, dir, pluginRoot, mode = "parcours" }) {
   const q = shellQuote;
+  const quoi =
+    mode === "pipeline"
+      ? `Ottho Builder Mobile (la vue du pipeline d'agents mobile) tourne sur ${url} pour ce projet. Il montre les huit agents dans leurs cinq phases (Specify, Plan, Implement, Validate, Release), l'avancement des features US-XX, les livrables qui attendent une validation, la base Supabase existante lue par le projet et ce que la fabrication Expo embarquera. Il lit le projet ; les validations se donnent dans le terminal et se consignent dans l'« Historique » du livrable.`
+      : `Ottho Builder Mobile (la vue du parcours, en lecture seule) tourne sur ${url} pour ce projet. Il lit ottho.json et montre les 34 étapes, l'étape courante, les preuves et les blocages. Il n'écrit rien : c'est toi qui enregistres l'avancement avec scripts/ottho-state.mjs, comme le demande la skill de l'étape.`;
+  const commande = mode === "pipeline" ? "/pipeline" : "/parcours";
   return [
-    `Ottho Builder Mobile (la vue du parcours, en lecture seule) tourne sur ${url} pour ce projet. Il lit ottho.json et montre les 34 étapes, l'étape courante, les preuves et les blocages. Il n'écrit rien : c'est toi qui enregistres l'avancement avec scripts/ottho-state.mjs, comme le demande la skill de l'étape.`,
+    quoi,
     "La personne lit cette vue à côté de son terminal : tu n'as rien à y faire, et rien à lui décrire de ce qu'elle voit déjà.",
-    `Pour rouvrir la vue dans le navigateur (commande /parcours), avec l'outil Bash au premier plan : node ${q(join(pluginRoot, "scripts", "visual-engine.mjs"))} --open --project ${q(dir)}`,
+    `Pour rouvrir la vue dans le navigateur (commande ${commande}), avec l'outil Bash au premier plan : node ${q(join(pluginRoot, "scripts", "visual-engine.mjs"))} --open --project ${q(dir)}`,
   ].join("\n");
 }
 
@@ -382,7 +408,7 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
       }
     }
   } else {
-    if (!force && !estProjetParcours(dir, env)) return "";
+    if (!force && !estProjetMobile(dir, env)) return "";
     if (!engine) return say(NOT_FOUND);
     let lock = null;
     let mine = false;
@@ -401,7 +427,10 @@ export async function main({ argv = [], stdin = "", env = process.env, cwd = pro
     url = waited.url;
     if (!url) return say(waited.exited ? NOT_STARTED : noOpen ? STARTING_NO_OPEN : STARTING);
   }
-  return say(`${APP_LABEL} : ${url}`, contextFor({ url, dir, pluginRoot }));
+  // Mode du Builder, pour dire à Claude ce que la personne a sous les yeux. Même règle que
+  // server/app.mjs (detectMode) : les marqueurs du parcours d'abord, le pipeline sinon.
+  const mode = estProjetParcours(dir, env) ? "parcours" : "pipeline";
+  return say(`${APP_LABEL} : ${url}`, contextFor({ url, dir, pluginRoot, mode }));
 }
 
 const invoked = process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
