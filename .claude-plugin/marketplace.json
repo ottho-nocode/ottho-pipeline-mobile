@@ -1,7 +1,7 @@
 {
   "name": "ottho-pipeline-mobile",
   "metadata": {
-    "description": "Marketplace officiel du plugin ottho-pipeline-mobile (Ottho Builder Mobile, la vue du parcours mobile Ottho)."
+    "description": "Marketplace officiel du plugin ottho-pipeline-mobile (Ottho Builder Mobile : la vue du parcours mobile et le pipeline d'agents SDD mobile)."
   },
   "owner": {
     "name": "Ottho",
@@ -11,12 +11,24 @@
     {
       "name": "ottho-pipeline-mobile",
       "source": "./",
-      "description": "Ottho Builder Mobile : la vue locale du parcours mobile Ottho, 34 étapes de l'idée à l'application publiée sur l'App Store et Google Play. S'ouvre à côté du terminal au démarrage de Claude Code dans un projet du parcours, montre le chemin en cinq actes, l'étape courante, les preuves, les blocages, les étapes écartées, ce que la fabrication Expo embarquera, et le prompt à coller. N'écrit rien dans le dépôt du parcours.",
+      "description": "Ottho Builder Mobile : la vue du parcours mobile Ottho (34 étapes, de l'idée à l'application publiée) et le pipeline d'agents SDD mobile. Le pipeline construit une application Expo qui se branche sur la base Supabase existante de l'application web du client : 8 agents en 5 phases (Specify, Plan, Implement, Validate, Release), aucun schéma conçu, seule la clé publishable embarquée, RLS vérifiée avant la première build, et une validation que le client coche sur son propre téléphone, sans Mac ni émulateur.",
       "author": {
         "name": "Ottho",
         "url": "https://ottho.co"
       },
-      "keywords": ["ottho", "mobile", "expo", "parcours", "app-store", "google-play", "builder"]
+      "keywords": [
+        "ottho",
+        "mobile",
+        "expo",
+        "parcours",
+        "pipeline",
+        "agents",
+        "sdd",
+        "supabase",
+        "app-store",
+        "google-play",
+        "builder"
+      ]
     }
   ]
 }
