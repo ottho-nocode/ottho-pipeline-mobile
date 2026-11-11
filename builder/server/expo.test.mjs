@@ -105,3 +105,61 @@ test("readExpo : projet EAS relié, eas.json cassé, et projet sans application 
   const sansDetecteur = await readExpo(await projet({ detecteur: null }));
   assert.deepEqual(sansDetecteur.heritage, ["easProjectId"]);
 });
+
+test("readExpo pipeline : app.json de l'application, aucun héritage (pas de modèle derrière elle)", async () => {
+  const dir = await tempDir("opm-expo-pipe-");
+  await mkdir(join(dir, "mobile-app"), { recursive: true });
+  await writeFile(
+    join(dir, "mobile-app", "app.json"),
+    JSON.stringify({
+      expo: {
+        name: "Suivi chantier",
+        slug: "suivi-chantier",
+        version: "1.0.0",
+        ios: { bundleIdentifier: "co.exemple.suivi" },
+        android: { package: "co.exemple.suivi" },
+        extra: { eas: { projectId: "11111111-2222-3333-4444-555555555555" } },
+      },
+    }),
+  );
+  await writeFile(join(dir, "mobile-app", "eas.json"), EAS);
+  const expo = await readExpo(dir, "pipeline");
+  assert.equal(expo.present, true);
+  assert.equal(expo.config, join("mobile-app", "app.json"));
+  const valeur = (key) => expo.champs.find((c) => c.key === key).valeur;
+  assert.equal(valeur("title"), "Suivi chantier");
+  assert.equal(valeur("bundleId"), "co.exemple.suivi");
+  assert.equal(valeur("androidPackage"), "co.exemple.suivi");
+  assert.equal(valeur("easProjectId"), "11111111-2222-3333-4444-555555555555");
+  assert.deepEqual(expo.profils, ["development", "preview", "production"]);
+  assert.equal(expo.relie, true);
+  // Pas de modèle derrière une application du pipeline : rien n'est signalé comme hérité.
+  assert.deepEqual(expo.heritage, []);
+  assert.equal(expo.champs.every((c) => c.heritee === false), true);
+});
+
+test("readExpo pipeline : app.config.ts lu par clés, équipe Apple prise dans eas.json", async () => {
+  const dir = await tempDir("opm-expo-ts-");
+  await mkdir(join(dir, "mobile-app"), { recursive: true });
+  await writeFile(
+    join(dir, "mobile-app", "app.config.ts"),
+    '// @ts-nocheck\nconst expoConfig = (ctx) => ({\n  ...ctx.config,\n  name: "Chantier",\n  slug: "chantier",\n  version: "2.1.0",\n  ios: { bundleIdentifier: "co.exemple.chantier" },\n  extra: { eas: { projectId: "aaaa-bbbb" } },\n});\nexport default expoConfig;\n',
+  );
+  await writeFile(
+    join(dir, "mobile-app", "eas.json"),
+    JSON.stringify({ cli: { appVersionSource: "remote" }, build: { base: {}, preview: {} }, submit: { production: { ios: { appleTeamId: "AB12CD34EF" } } } }),
+  );
+  const expo = await readExpo(dir, "pipeline");
+  const valeur = (key) => expo.champs.find((c) => c.key === key).valeur;
+  assert.equal(expo.config, join("mobile-app", "app.config.ts"));
+  assert.equal(valeur("title"), "Chantier");
+  assert.equal(valeur("bundleId"), "co.exemple.chantier");
+  assert.equal(valeur("appleTeamId"), "AB12CD34EF");
+  assert.equal(valeur("androidPackage"), null);
+  assert.deepEqual(expo.profils, ["preview"]);
+  assert.equal(expo.versionSource, "remote");
+});
+
+test("readExpo pipeline : projet sans application Expo", async () => {
+  assert.deepEqual(await readExpo(await tempDir("opm-expo-rien-"), "pipeline"), { present: false });
+});
