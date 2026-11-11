@@ -1,10 +1,10 @@
-import type { Etape, State } from "../types";
+import type { Etape, ParcoursState } from "../types";
 import { ETAT_LABEL, etatDe, numero } from "../statuts";
 import { ETAPES, REPRENDRE, debloquer } from "../prompts";
 import { CopyButton } from "./CopyButton";
 import { Fabrication } from "./Fabrication";
 
-type Props = { state: State; onSelect: (id: string) => void };
+type Props = { state: ParcoursState; onSelect: (id: string) => void };
 
 const quand = (iso: string | null) => (iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : null);
 
@@ -135,4 +135,4 @@ export function Colonne({ state, onSelect }: Props) {
 }
 
 /** Nombre d'éléments qui attendent la personne (barre fine quand la colonne est fermée). */
-export const enAttente = (state: State) => (state.courante ? 1 : 0) + state.etapes.filter((e: Etape) => e.statut === "blocked" && e.applicable).length;
+export const enAttente = (state: ParcoursState) => (state.courante ? 1 : 0) + state.etapes.filter((e: Etape) => e.statut === "blocked" && e.applicable).length;

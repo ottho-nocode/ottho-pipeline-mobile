@@ -1,8 +1,8 @@
-import type { Acte, Etape, State } from "../types";
+import type { Acte, Etape, ParcoursState } from "../types";
 import { ETAT_LABEL, Pastille, dureeRestante, etatDe, numero } from "../statuts";
 
 type Props = {
-  state: State;
+  state: ParcoursState;
   // Actes dépliés : l'acte de l'étape courante l'est par défaut, le choix de la personne l'emporte.
   ouverts: Record<string, boolean>;
   onToggleActe: (nom: string) => void;

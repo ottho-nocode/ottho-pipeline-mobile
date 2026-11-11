@@ -46,5 +46,8 @@ export function usePanel(options: PanelOptions) {
   return { width: panel.width, open: panel.open, setWidth, setOpen, limits };
 }
 
-// Colonne de gauche : ton étape, tes choix, la fiche d'une étape, les documents.
+// Colonne de gauche : ton étape, tes choix, la fiche d'une étape, les documents (vue du parcours) ;
+// les livrables, les questions, la base (pipeline).
 export const LEFT_PANEL: PanelOptions = { key: "ottho-parcours-side", min: 300, ratio: 0.32, open: true };
+// Colonne de droite (pipeline seulement) : aperçu de l'app du projet.
+export const RIGHT_PANEL: PanelOptions = { key: "ottho-mobile-preview", min: 320, ratio: 0.36, open: false };
