@@ -1,26 +1,158 @@
+import { Background, BackgroundVariant, Handle, Position, ReactFlow, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import type { Acte, Etape, ParcoursState } from "../types";
 import { ETAT_LABEL, Pastille, dureeRestante, etatDe, numero } from "../statuts";
 import { Robot } from "../robots";
 import { robotDeEtape } from "../etape-robots";
+import { useFittedViewport } from "../useFittedViewport";
+import type { Theme } from "../useTheme";
 
 type Props = {
   state: ParcoursState;
-  // Actes dépliés : l'acte de l'étape courante l'est par défaut, le choix de la personne l'emporte.
-  ouverts: Record<string, boolean>;
-  onToggleActe: (nom: string) => void;
   selected: string | null;
   onSelect: (id: string) => void;
+  theme: Theme;
 };
 
-const parId = (etapes: Etape[]) => new Map(etapes.map((e) => [e.id, e]));
+// Un acte par colonne, une étape par carte : le parcours se lit comme le pipeline d'agents, sur le
+// même canevas. Les cartes ne se déplacent pas (le chemin est celui du parcours, pas un tableau à
+// organiser) ; la vue se déplace et se zoome.
+const COL_W = 292;
+const ROW_H = 134;
+// Un acte de neuf étapes ferait une colonne de plus de mille pixels : au-delà de MAX_ROWS, il se
+// replie sur une colonne voisine. Le parcours se lit toujours de haut en bas, puis colonne suivante.
+const MAX_ROWS = 4;
+// Encombrement maximal d'une carte et d'un titre d'acte : sert à cadrer le canevas sans attendre
+// les mesures de xyflow (même raison que dans PipelineGraph).
+const NODE_BOX = { etape: { w: 252, h: ROW_H }, label: { w: 240, h: 24 } };
 
-// Le chemin du parcours : cinq actes empilés, l'acte en cours déplié en cartes d'étape, les autres
-// en ligne de pastilles. Les étapes écartées par les réponses descendent en bas de leur acte.
-export function Chemin({ state, ouverts, onToggleActe, selected, onSelect }: Props) {
-  const etapes = parId(state.etapes);
-  const courante = state.courante ? (etapes.get(state.courante) ?? null) : null;
-  const acteCourant = courante?.acte ?? null;
-  const estOuvert = (acte: Acte) => ouverts[acte.nom] ?? acte.nom === acteCourant;
+type EtapeData = {
+  etape: Etape;
+  etat: string;
+  courante: boolean;
+  selected: boolean;
+  rangActe: number;
+};
+type LabelData = { label: string; index: string; faites: number; total: number };
+
+// Carte d'étape, dessinée comme la carte d'agent : le visage du métier à gauche, le titre et
+// l'état à droite. Le robot ne dit pas qu'un agent tourne (le parcours n'en appelle aucun) : il dit
+// de quel métier relève l'étape. Voir etape-robots.ts.
+function EtapeNode({ data }: NodeProps<Node<EtapeData, "etape">>) {
+  const { etape, etat, courante, selected, rangActe } = data;
+  const sous = etape.statut === "done" && etape.preuve ? etape.preuve : etape.statut === "blocked" || etape.statut === "skipped" ? etape.raison : etape.but;
+  return (
+    <div
+      className={`etape-node is-${etat}${courante ? " is-courante" : ""}${selected ? " is-selected" : ""}`}
+      data-etape={etape.id}
+      data-etat={etat}
+      aria-current={courante ? "step" : undefined}
+    >
+      <Handle type="target" position={Position.Left} id="left" />
+      <Handle type="target" position={Position.Top} id="top" />
+      <Robot name={robotDeEtape(etape.id, rangActe)} size={46} className="robot etape-node__robot" />
+      <div className="etape-node__body">
+        <div className="etape-node__head">
+          <span className="etape-node__num">{numero(etape)}</span>
+          <span className="etape-node__name">{etape.titre}</span>
+          <Pastille etape={etape} />
+        </div>
+        <div className="etape-node__meta">
+          <span className="etape-node__etat">{ETAT_LABEL[etat as keyof typeof ETAT_LABEL]}</span>
+          {etape.duree && <span>{etape.duree}</span>}
+          {!etape.connue && <span className="etape-node__inconnue">nouvelle</span>}
+        </div>
+        {sous && (
+          <div className={etape.statut === "done" && etape.preuve ? "etape-node__sous is-preuve" : "etape-node__sous"} title={sous}>
+            {sous}
+          </div>
+        )}
+      </div>
+      <Handle type="source" position={Position.Right} id="right" />
+      <Handle type="source" position={Position.Bottom} id="bottom" />
+    </div>
+  );
+}
+
+function ActeNode({ data }: NodeProps<Node<LabelData, "label">>) {
+  return (
+    <div className="acte-label">
+      <span className="acte-label__index">{data.index}</span>
+      <span className="acte-label__nom">{data.label}</span>
+      <span className="acte-label__compte">
+        {data.faites}/{data.total}
+      </span>
+    </div>
+  );
+}
+
+const nodeTypes = { etape: EtapeNode, label: ActeNode };
+
+// Les étapes écartées par les réponses descendent en bas de leur colonne : elles restent visibles
+// (la personne doit pouvoir vérifier ce que ses réponses ont retiré) mais ne coupent pas le chemin.
+function rangees(acte: Acte, parId: Map<string, Etape>): Etape[] {
+  const dedans = acte.etapes.map((id) => parId.get(id)).filter((e): e is Etape => Boolean(e));
+  return [...dedans.filter((e) => e.applicable), ...dedans.filter((e) => !e.applicable)];
+}
+
+export function Chemin({ state, selected, onSelect, theme }: Props) {
+  const parId = new Map(state.etapes.map((e) => [e.id, e]));
+  const nodes: Node[] = [];
+  // Chemin suivi par le trait : les étapes retenues, dans l'ordre des actes. Une étape écartée
+  // n'est reliée à rien, sinon le trait passerait par une étape que la personne ne fera jamais.
+  const chaine: { id: string; col: number }[] = [];
+  // Cadrage d'ouverture : l'acte en cours, pas le parcours entier. Trente-quatre cartes tiennent
+  // dans la scène, mais à un zoom où plus rien ne se lit : le canevas s'ouvre là où la personne en
+  // est, et elle se déplace pour voir le reste.
+  const focus: { x: number; y: number; w: number; h: number }[] = [];
+  const acteCourant = state.courante ? (parId.get(state.courante)?.acte ?? null) : null;
+
+  let col = 0;
+  state.actes.forEach((acte, rang) => {
+    const dedans = rangees(acte, parId);
+    if (!dedans.length) return;
+    const premiere = col;
+    const vise = acteCourant ? acte.nom === acteCourant : rang === 0;
+    const label = { x: premiere * COL_W, y: 0, ...NODE_BOX.label };
+    nodes.push({
+      id: `acte-${acte.nom}`,
+      type: "label",
+      position: { x: label.x, y: label.y },
+      data: { label: acte.nom, index: String(rang + 1).padStart(2, "0"), faites: acte.faites, total: acte.total },
+      selectable: false,
+    });
+    if (vise) focus.push(label);
+    dedans.forEach((etape, i) => {
+      const colonne = premiere + Math.floor(i / MAX_ROWS);
+      const boite = { x: colonne * COL_W, y: 36 + (i % MAX_ROWS) * ROW_H, ...NODE_BOX.etape };
+      nodes.push({
+        id: etape.id,
+        type: "etape",
+        position: { x: boite.x, y: boite.y },
+        data: { etape, etat: etatDe(etape), courante: etape.id === state.courante, selected: etape.id === selected, rangActe: rang },
+      });
+      if (vise) focus.push(boite);
+      if (etape.applicable) chaine.push({ id: etape.id, col: colonne });
+    });
+    col = premiere + Math.max(1, Math.ceil(dedans.length / MAX_ROWS));
+  });
+
+  // Même colonne : du bas de l'une au haut de la suivante ; d'une colonne à l'autre : de droite à
+  // gauche. L'arête qui mène à l'étape courante bat, comme celle d'un agent qui travaille.
+  const edges: Edge[] = chaine.slice(1).map((to, i) => {
+    const vertical = chaine[i].col === to.col;
+    return {
+      id: `${chaine[i].id}->${to.id}`,
+      source: chaine[i].id,
+      target: to.id,
+      sourceHandle: vertical ? "bottom" : "right",
+      targetHandle: vertical ? "top" : "left",
+      animated: to.id === state.courante,
+    };
+  });
+
+  const layoutKey = `${acteCourant ?? ""}|${nodes.map((n) => `${n.id}@${n.position.x},${n.position.y}`).join("|")}`;
+  const { boxRef, viewport, setViewport } = useFittedViewport(focus, layoutKey, { padding: "28px" });
+
   return (
     <section className="chemin" aria-label="Le parcours, acte par acte">
       <header className="chemin__tete">
@@ -38,133 +170,36 @@ export function Chemin({ state, ouverts, onToggleActe, selected, onSelect }: Pro
         </div>
       </header>
 
-      <ol className="chemin__actes">
-        {state.actes.map((acte, index) => {
-          const dedans = acte.etapes.map((id) => etapes.get(id)).filter((e): e is Etape => Boolean(e));
-          if (dedans.length === 0) return null;
-          const ouvert = estOuvert(acte);
-          const retenues = dedans.filter((e) => e.applicable);
-          const ecartees = dedans.filter((e) => !e.applicable);
-          return (
-            <li key={acte.nom} className={`acte${acte.nom === acteCourant ? " is-courant" : ""}${ouvert ? " is-ouvert" : ""}`}>
-              <button
-                type="button"
-                className="acte__tete"
-                aria-expanded={ouvert}
-                onClick={() => onToggleActe(acte.nom)}
-                title={ouvert ? `Replier « ${acte.nom} »` : `Déplier « ${acte.nom} »`}
-                // Lu en une phrase : le nom de l'acte, son avancement, puis ce que fait le bouton.
-                aria-label={`${acte.nom}, ${acte.faites} étape${acte.faites === 1 ? "" : "s"} faite${acte.faites === 1 ? "" : "s"} sur ${acte.total}. ${ouvert ? "Replier" : "Déplier"}.`}
-              >
-                <span className="acte__rang" aria-hidden="true">
-                  {index + 1}
-                </span>
-                <span className="acte__nom">{acte.nom}</span>
-                <span className="acte__compte">
-                  {acte.faites} faite{acte.faites === 1 ? "" : "s"} sur {acte.total}
-                </span>
-                <span className="acte__avance" aria-hidden="true">
-                  <span style={{ width: `${acte.total ? (acte.faites / acte.total) * 100 : 0}%` }} />
-                </span>
-                <span className="acte__chevron" aria-hidden="true">
-                  {ouvert ? "⌄" : "›"}
-                </span>
-              </button>
+      <div className={state.courante ? "flow is-live" : "flow"} ref={boxRef}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          colorMode={theme}
+          viewport={viewport}
+          onViewportChange={setViewport}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          minZoom={0.3}
+          onNodeClick={(_, node) => {
+            if (node.type === "etape") onSelect(node.id);
+          }}
+        >
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
+        </ReactFlow>
+      </div>
 
-              {!ouvert && (
-                <ul className="acte__pastilles" aria-label={`${acte.nom} : ${acte.faites} étapes faites sur ${acte.total}`}>
-                  {dedans.map((e) => (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        className={`pastille-btn${e.id === state.courante ? " is-courante" : ""}`}
-                        onClick={() => onSelect(e.id)}
-                        title={`${numero(e)} ${e.titre} : ${ETAT_LABEL[etatDe(e)]}`}
-                      >
-                        <Pastille etape={e} />
-                        <span className="sr-only">
-                          {numero(e)} {e.titre} : {ETAT_LABEL[etatDe(e)]}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {ouvert && (
-                <>
-                  <ul className="acte__etapes">
-                    {retenues.map((e) => (
-                      <li key={e.id}>
-                        <CarteEtape etape={e} rangActe={index} courante={e.id === state.courante} selected={e.id === selected} onSelect={onSelect} />
-                      </li>
-                    ))}
-                  </ul>
-                  {ecartees.length > 0 && (
-                    <div className="acte__ecartees">
-                      <h4>Selon tes réponses, ces étapes ne te concernent pas</h4>
-                      <ul>
-                        {ecartees.map((e) => (
-                          <li key={e.id}>
-                            <CarteEtape etape={e} rangActe={index} courante={false} selected={e.id === selected} onSelect={onSelect} />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      {/* Le canevas n'est pas lisible au clavier ni au lecteur d'écran : la même liste, en texte. */}
+      <ul className="sr-only">
+        {state.etapes.map((e) => (
+          <li key={e.id}>
+            <button type="button" onClick={() => onSelect(e.id)}>
+              {numero(e)} {e.titre} : {ETAT_LABEL[etatDe(e) as keyof typeof ETAT_LABEL]}
+              {e.applicable ? "" : " (écartée par tes réponses)"}
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
-  );
-}
-
-// Carte d'étape, dessinée comme une carte d'agent du pipeline : le visage du métier à gauche, le
-// titre et l'état à droite. Le robot ne dit pas qu'un agent tourne (le parcours n'en appelle
-// aucun) : il dit de quel métier relève l'étape. Voir etape-robots.ts.
-function CarteEtape({
-  etape,
-  rangActe,
-  courante,
-  selected,
-  onSelect,
-}: {
-  etape: Etape;
-  rangActe: number;
-  courante: boolean;
-  selected: boolean;
-  onSelect: (id: string) => void;
-}) {
-  const etat = etatDe(etape);
-  return (
-    <button
-      type="button"
-      className={`etape is-${etat}${courante ? " is-courante" : ""}${selected ? " is-selected" : ""}`}
-      onClick={() => onSelect(etape.id)}
-      aria-current={courante ? "step" : undefined}
-    >
-      <Robot name={robotDeEtape(etape.id, rangActe)} size={48} className="robot etape__robot" />
-      <span className="etape__corps">
-        <span className="etape__tete">
-          <span className="etape__num" aria-hidden="true">
-            {numero(etape)}
-          </span>
-          <span className="etape__titre">{etape.titre}</span>
-          <Pastille etape={etape} />
-        </span>
-        <span className="etape__meta">
-          <span className="etape__etat">{ETAT_LABEL[etat]}</span>
-          {etape.duree && <span className="etape__duree">{etape.duree}</span>}
-          {!etape.connue && <span className="etape__inconnue">nouvelle étape du parcours</span>}
-        </span>
-        {etape.statut === "done" && etape.preuve && <span className="etape__preuve">{etape.preuve}</span>}
-        {etape.statut === "blocked" && etape.raison && <span className="etape__raison">Bloquée : {etape.raison}</span>}
-        {etape.statut === "skipped" && etape.raison && <span className="etape__raison">Sautée : {etape.raison}</span>}
-        {etape.statut !== "done" && etape.but && <span className="etape__but">{etape.but}</span>}
-      </span>
-    </button>
   );
 }

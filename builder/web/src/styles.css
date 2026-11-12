@@ -295,50 +295,28 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .notif__hint { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
 .notif .banner__actions { align-self: flex-end; }
 
-/* ------------------------------------------------------------ le chemin en actes */
+/* ------------------------------------------------------------ le chemin en actes
+   Le parcours tient sur un canevas, comme le pipeline : une colonne par acte, une carte par
+   étape. L'entête (avancement) reste fixe, le canevas prend le reste de la hauteur. */
 .chemin-zone { min-height: 0; display: grid; }
 .chemin {
-  min-height: 0; overflow: auto; padding: 18px 20px 24px;
-  border-radius: var(--radius-l); border: 1px solid var(--line-soft);
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, var(--halo-warm), transparent 70%), var(--surface-1);
+  min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr);
 }
-.chemin__tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.chemin__tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 12px; padding: 0 2px; }
 .chemin__compte { margin: 6px 0 0; font-size: 15px; color: var(--text-2); }
 .chemin__compte strong { color: var(--text); font-weight: 650; }
 .chemin__barre { flex: 1; max-width: 320px; height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
 .chemin__barre > span { display: block; height: 100%; border-radius: 999px; background: var(--warm-grad); transition: width 250ms var(--ease); }
 
-.chemin__actes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-/* Le chemin : un filet relie les actes, de l'étape de départ à la publication. */
-.acte { position: relative; padding-left: 26px; }
-.acte::before {
-  content: ""; position: absolute; left: 10px; top: 0; bottom: -10px; width: 2px;
-  background: linear-gradient(180deg, var(--line) 0%, var(--line-soft) 100%);
+/* Titre de colonne : un acte du parcours, comme le titre de phase du pipeline. */
+.acte-label {
+  display: flex; align-items: center; gap: 8px;
+  font: 600 11px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
 }
-.acte:last-child::before { bottom: 50%; }
-.acte__tete {
-  position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px;
-  border-radius: var(--radius-m); border: 1px solid var(--line-soft); background: var(--surface-2); color: var(--text);
-  font: inherit; text-align: left; cursor: pointer;
-  transition: border-color 160ms var(--ease), background 160ms var(--ease);
-}
-.acte__tete:hover { background: var(--surface-3); }
-.acte.is-courant > .acte__tete { border-color: var(--warm-line); background: linear-gradient(180deg, var(--warm-tint), var(--surface-2)); }
-.acte__rang {
-  position: absolute; left: -26px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
-  border: 1px solid var(--line); background: var(--bg); color: var(--faint); font: 700 11px/1 var(--font-mono);
-}
-.acte.is-courant .acte__rang { border-color: var(--warm-line); color: var(--warm-1); }
-.acte__nom { font-weight: 650; letter-spacing: -0.01em; }
-.acte__compte { font: 500 12px var(--font-mono); color: var(--muted); }
-.acte__avance { flex: 1; max-width: 160px; height: 4px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
-.acte__avance > span { display: block; height: 100%; background: var(--ok); }
-.acte__chevron { margin-left: auto; font: 700 13px/1 var(--font-mono); color: var(--act-text); }
+.acte-label__index { color: var(--warm-1); }
+.acte-label__nom { white-space: nowrap; }
+.acte-label__compte { color: var(--faint); letter-spacing: 0.04em; }
 
-.acte__pastilles { list-style: none; margin: 8px 0 0; padding: 0 0 0 2px; display: flex; flex-wrap: wrap; gap: 6px; }
-.pastille-btn { border: 0; background: none; padding: 2px; border-radius: 50%; cursor: pointer; }
-.pastille-btn:hover { background: var(--surface-3); }
-.pastille-btn.is-courante { box-shadow: 0 0 0 2px var(--warm-line); }
 .pastille {
   display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
   border: 1px solid var(--line); background: var(--surface-1); color: var(--faint); font: 700 11px/1 var(--font-mono);
@@ -349,49 +327,78 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .pastille.is-skipped { border-style: dashed; color: var(--faint); }
 .pastille.is-ecartee { border-style: dotted; color: var(--faint); background: none; }
 
-.acte__etapes, .acte__ecartees ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
-.acte__ecartees { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line-soft); }
-.acte__ecartees h4 { margin: 0; font: 600 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
-
-/* Carte d'étape : même dessin que la carte d'agent du pipeline (vignette du métier à gauche,
-   corps à droite), pour que les deux vues du Builder se lisent de la même façon. */
-.etape {
-  display: grid; grid-template-columns: 48px minmax(0, 1fr); column-gap: 12px; align-items: start;
-  width: 100%; padding: 12px 14px;
+/* Carte d'étape sur le canevas : même dessin que la carte d'agent du pipeline (vignette du métier
+   à gauche, corps à droite), pour que les deux vues du Builder se lisent de la même façon. */
+.etape-node {
+  position: relative; width: 252px; padding: 12px 14px;
+  display: grid; grid-template-columns: 46px minmax(0, 1fr); column-gap: 12px; align-items: start;
   border-radius: 14px; border: 1px solid var(--line-soft);
-  background: linear-gradient(180deg, var(--surface-2), var(--surface-1)); color: var(--text);
-  font: inherit; text-align: left; cursor: pointer;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  color: var(--text-2); cursor: pointer;
   transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease), transform 200ms var(--ease);
 }
-.etape:hover { border-color: var(--line); transform: translateY(-1px); box-shadow: var(--shadow-lift); }
-.etape.is-courante {
-  border-color: transparent;
+.etape-node:hover { border-color: var(--line); transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+.etape-node.is-courante {
+  border-color: transparent; color: var(--text);
   background: linear-gradient(var(--surface-2), var(--surface-1)) padding-box, var(--warm-grad) border-box;
   box-shadow: var(--shadow-banner);
 }
-.etape.is-in_progress { border-color: var(--run-line); }
-.etape.is-blocked { border-color: var(--ko); }
-.etape.is-ecartee, .etape.is-skipped { opacity: 0.68; }
-.etape.is-selected { box-shadow: 0 0 0 2px var(--act-line), var(--shadow-lift); }
-.etape__robot { margin-top: 1px; }
-.etape__tete { display: flex; align-items: center; gap: 8px; }
-.etape__num { flex: none; font: 600 12px/1.6 var(--font-mono); color: var(--faint); }
-.etape__corps { min-width: 0; display: grid; gap: 3px; }
-.etape__titre {
-  min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-weight: 650; font-size: 14px; letter-spacing: -0.01em;
+.etape-node.is-done { border-color: var(--ok-line); color: var(--text); }
+.etape-node.is-in_progress { border-color: var(--run-line); color: var(--text); }
+.etape-node.is-blocked { border-color: var(--ko); }
+.etape-node.is-ecartee, .etape-node.is-skipped { border-style: dashed; opacity: 0.6; }
+.etape-node.is-selected { box-shadow: 0 0 0 2px var(--act-1), var(--shadow-lift); }
+.etape-node .react-flow__handle { opacity: 0; pointer-events: none; }
+.etape-node__robot { margin-top: 1px; }
+.etape-node__body { min-width: 0; }
+.etape-node__head { display: flex; align-items: flex-start; gap: 7px; }
+.etape-node__num { flex: none; font: 600 11.5px/1.5 var(--font-mono); color: var(--faint); }
+/* Un titre d'étape est une phrase, pas un nom d'agent : deux lignes, sinon il est coupé net. */
+.etape-node__name {
+  min-width: 0; flex: 1;
+  font-weight: 650; font-size: 13.5px; line-height: 1.3; letter-spacing: -0.01em; color: var(--text);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
-.etape.is-courante .etape__titre { font-weight: 700; }
-.etape__meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 500 11.5px var(--font-mono); color: var(--muted); }
-.etape__etat { color: var(--text-2); }
-.etape.is-done .etape__etat { color: var(--ok); }
-.etape.is-in_progress .etape__etat { color: var(--run); }
-.etape.is-blocked .etape__etat { color: var(--ko); }
-.etape__inconnue { color: var(--warm-1); }
-.etape__but { font-size: 12.5px; color: var(--muted); }
-.etape__preuve { font-size: 12.5px; color: var(--text-2); overflow-wrap: anywhere; }
-.etape__preuve::before { content: "Preuve : "; color: var(--ok); font-weight: 600; }
-.etape__raison { font-size: 12.5px; color: var(--warm-1); overflow-wrap: anywhere; }
+.etape-node__meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 7px; font: 500 11px var(--font-mono); color: var(--muted); }
+.etape-node__etat { color: var(--text-2); }
+.etape-node.is-done .etape-node__etat { color: var(--ok); }
+.etape-node.is-in_progress .etape-node__etat { color: var(--run); }
+.etape-node.is-blocked .etape-node__etat { color: var(--ko); }
+.etape-node__inconnue { color: var(--warm-1); }
+.etape-node__sous {
+  margin-top: 7px; font-size: 11.5px; line-height: 1.45; color: var(--faint);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.etape-node__sous.is-preuve { color: var(--text-2); }
+.etape-node__sous.is-preuve::before { content: "Preuve : "; color: var(--ok); font-weight: 600; }
+
+/* ------------------------------------------------------------ canevas (les deux vues)
+   La scène de xyflow : le pipeline y pose ses agents, le parcours ses étapes. La règle n'est donc
+   portée par aucune des deux vues. `is-live` allume le halo : un agent qui travaille, ou l'étape
+   en cours du parcours. */
+.flow {
+  position: relative; height: 100%; min-height: 0; overflow: hidden;
+  border-radius: var(--radius-l); border: 1px solid var(--line-soft);
+  background: var(--bg-deep);
+}
+.flow::before,
+.flow::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  transition: opacity 600ms var(--ease);
+}
+.flow::before { background: radial-gradient(ellipse 70% 60% at 50% 0%, var(--halo-warm), transparent 70%); }
+.flow::after { background: radial-gradient(ellipse 60% 60% at 50% 45%, var(--halo-run), transparent 70%); opacity: 0; }
+.flow.is-live::after { opacity: 1; }
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-background-pattern-color: var(--dots);
+  --xy-edge-stroke-default: var(--line);
+}
+.flow .react-flow { position: relative; z-index: 1; }
+.react-flow__attribution { background: transparent; }
+.react-flow__attribution a { color: var(--faint); }
+.react-flow__edge-path { stroke: var(--line); stroke-width: 1.5; }
+.react-flow__edge.animated .react-flow__edge-path { stroke: var(--run); }
 
 /* ------------------------------------------------------------ robots (les deux vues)
    Tête dans une vignette teintée de la couleur du robot (reprise du webinar). Le pipeline les

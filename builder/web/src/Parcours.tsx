@@ -21,8 +21,6 @@ export function Parcours({ state, online }: { state: ParcoursState; online: bool
   const side = usePanel(LEFT_PANEL);
   // Journal du bas : caché ou affiché depuis la barre du haut, choix mémorisé.
   const [sections, setSections] = usePersisted("ottho-parcours-sections", { journal: true });
-  // Actes dépliés à la main : ce choix l'emporte sur l'ouverture par défaut de l'acte courant.
-  const [ouverts, setOuverts] = usePersisted<Record<string, boolean>>("ottho-parcours-actes", {});
   const [selected, setSelected] = useState<string | null>(null);
   const [docsOpen, setDocsOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<string | null>(null);
@@ -147,15 +145,7 @@ export function Parcours({ state, online }: { state: ParcoursState; online: bool
           </div>
 
           <section className="chemin-zone">
-            <Chemin
-              state={state}
-              ouverts={ouverts}
-              onToggleActe={(nom) =>
-                setOuverts((o) => ({ ...o, [nom]: !(o[nom] ?? nom === (courante?.acte ?? null)) }))
-              }
-              selected={selected}
-              onSelect={ouvrirEtape}
-            />
+            <Chemin state={state} selected={selected} onSelect={ouvrirEtape} theme={theme} />
           </section>
 
           {sections.journal && (
