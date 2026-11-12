@@ -1,5 +1,7 @@
 import type { Acte, Etape, ParcoursState } from "../types";
 import { ETAT_LABEL, Pastille, dureeRestante, etatDe, numero } from "../statuts";
+import { Robot } from "../robots";
+import { robotDeEtape } from "../etape-robots";
 
 type Props = {
   state: ParcoursState;
@@ -94,7 +96,7 @@ export function Chemin({ state, ouverts, onToggleActe, selected, onSelect }: Pro
                   <ul className="acte__etapes">
                     {retenues.map((e) => (
                       <li key={e.id}>
-                        <CarteEtape etape={e} courante={e.id === state.courante} selected={e.id === selected} onSelect={onSelect} />
+                        <CarteEtape etape={e} rangActe={index} courante={e.id === state.courante} selected={e.id === selected} onSelect={onSelect} />
                       </li>
                     ))}
                   </ul>
@@ -104,7 +106,7 @@ export function Chemin({ state, ouverts, onToggleActe, selected, onSelect }: Pro
                       <ul>
                         {ecartees.map((e) => (
                           <li key={e.id}>
-                            <CarteEtape etape={e} courante={false} selected={e.id === selected} onSelect={onSelect} />
+                            <CarteEtape etape={e} rangActe={index} courante={false} selected={e.id === selected} onSelect={onSelect} />
                           </li>
                         ))}
                       </ul>
@@ -120,7 +122,22 @@ export function Chemin({ state, ouverts, onToggleActe, selected, onSelect }: Pro
   );
 }
 
-function CarteEtape({ etape, courante, selected, onSelect }: { etape: Etape; courante: boolean; selected: boolean; onSelect: (id: string) => void }) {
+// Carte d'étape, dessinée comme une carte d'agent du pipeline : le visage du métier à gauche, le
+// titre et l'état à droite. Le robot ne dit pas qu'un agent tourne (le parcours n'en appelle
+// aucun) : il dit de quel métier relève l'étape. Voir etape-robots.ts.
+function CarteEtape({
+  etape,
+  rangActe,
+  courante,
+  selected,
+  onSelect,
+}: {
+  etape: Etape;
+  rangActe: number;
+  courante: boolean;
+  selected: boolean;
+  onSelect: (id: string) => void;
+}) {
   const etat = etatDe(etape);
   return (
     <button
@@ -129,12 +146,15 @@ function CarteEtape({ etape, courante, selected, onSelect }: { etape: Etape; cou
       onClick={() => onSelect(etape.id)}
       aria-current={courante ? "step" : undefined}
     >
-      <Pastille etape={etape} />
-      <span className="etape__num" aria-hidden="true">
-        {numero(etape)}
-      </span>
+      <Robot name={robotDeEtape(etape.id, rangActe)} size={48} className="robot etape__robot" />
       <span className="etape__corps">
-        <span className="etape__titre">{etape.titre}</span>
+        <span className="etape__tete">
+          <span className="etape__num" aria-hidden="true">
+            {numero(etape)}
+          </span>
+          <span className="etape__titre">{etape.titre}</span>
+          <Pastille etape={etape} />
+        </span>
         <span className="etape__meta">
           <span className="etape__etat">{ETAT_LABEL[etat]}</span>
           {etape.duree && <span className="etape__duree">{etape.duree}</span>}

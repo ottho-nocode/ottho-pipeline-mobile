@@ -410,22 +410,8 @@ body.is-resizing iframe { pointer-events: none; }
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
 
-/* Robots des agents : tête dans une vignette teintée de leur couleur (reprise du webinar). */
-.is-pipeline .robot {
-  flex: none; display: inline-grid; place-items: center;
-  width: var(--robot-size); height: var(--robot-size);
-  border-radius: calc(var(--robot-size) * 0.27);
-  border: 1px solid color-mix(in oklch, var(--robot) 34%, var(--line-soft));
-  background: radial-gradient(circle at 50% 34%, color-mix(in oklch, var(--robot) 34%, var(--surface-2)), color-mix(in oklch, var(--robot) 12%, var(--surface-1)) 76%);
-}
-
-.is-pipeline .robot img { width: 86%; height: 86%; object-fit: contain; user-select: none; }
-
-.is-pipeline .robot--full img { width: 80%; height: 80%; }
-
-.is-pipeline .robot--inline { border: 0; background: none; vertical-align: -5px; margin-right: 5px; }
-
-.is-pipeline .robot--inline img { width: 100%; height: 100%; }
+/* Les robots ne sont plus décrits ici : les deux vues les dessinent (cartes d'agent du pipeline,
+   cartes d'étape du parcours), donc leur vignette est une primitive partagée, dans styles.css. */
 
 .is-pipeline .agent-node.has-robot { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 12px; align-items: start; }
 

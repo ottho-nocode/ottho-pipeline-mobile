@@ -353,13 +353,17 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .acte__ecartees { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line-soft); }
 .acte__ecartees h4 { margin: 0; font: 600 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
 
+/* Carte d'étape : même dessin que la carte d'agent du pipeline (vignette du métier à gauche,
+   corps à droite), pour que les deux vues du Builder se lisent de la même façon. */
 .etape {
-  display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 10px 14px;
-  border-radius: var(--radius-m); border: 1px solid var(--line-soft); background: var(--surface-1); color: var(--text);
+  display: grid; grid-template-columns: 48px minmax(0, 1fr); column-gap: 12px; align-items: start;
+  width: 100%; padding: 12px 14px;
+  border-radius: 14px; border: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1)); color: var(--text);
   font: inherit; text-align: left; cursor: pointer;
-  transition: border-color 160ms var(--ease), background 160ms var(--ease), transform 160ms var(--ease);
+  transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease), transform 200ms var(--ease);
 }
-.etape:hover { background: var(--surface-2); }
+.etape:hover { border-color: var(--line); transform: translateY(-1px); box-shadow: var(--shadow-lift); }
 .etape.is-courante {
   border-color: transparent;
   background: linear-gradient(var(--surface-2), var(--surface-1)) padding-box, var(--warm-grad) border-box;
@@ -368,10 +372,15 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .etape.is-in_progress { border-color: var(--run-line); }
 .etape.is-blocked { border-color: var(--ko); }
 .etape.is-ecartee, .etape.is-skipped { opacity: 0.68; }
-.etape.is-selected { box-shadow: 0 0 0 2px var(--act-line); }
+.etape.is-selected { box-shadow: 0 0 0 2px var(--act-line), var(--shadow-lift); }
+.etape__robot { margin-top: 1px; }
+.etape__tete { display: flex; align-items: center; gap: 8px; }
 .etape__num { flex: none; font: 600 12px/1.6 var(--font-mono); color: var(--faint); }
 .etape__corps { min-width: 0; display: grid; gap: 3px; }
-.etape__titre { font-weight: 600; letter-spacing: -0.005em; }
+.etape__titre {
+  min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 650; font-size: 14px; letter-spacing: -0.01em;
+}
 .etape.is-courante .etape__titre { font-weight: 700; }
 .etape__meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 500 11.5px var(--font-mono); color: var(--muted); }
 .etape__etat { color: var(--text-2); }
@@ -383,6 +392,22 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .etape__preuve { font-size: 12.5px; color: var(--text-2); overflow-wrap: anywhere; }
 .etape__preuve::before { content: "Preuve : "; color: var(--ok); font-weight: 600; }
 .etape__raison { font-size: 12.5px; color: var(--warm-1); overflow-wrap: anywhere; }
+
+/* ------------------------------------------------------------ robots (les deux vues)
+   Tête dans une vignette teintée de la couleur du robot (reprise du webinar). Le pipeline les
+   pose sur ses cartes d'agent, le parcours sur ses cartes d'étape : la règle n'est donc portée
+   par aucune des deux vues. La couleur et la taille arrivent en variables (robots.tsx). */
+.robot {
+  flex: none; display: inline-grid; place-items: center;
+  width: var(--robot-size); height: var(--robot-size);
+  border-radius: calc(var(--robot-size) * 0.27);
+  border: 1px solid color-mix(in oklch, var(--robot) 34%, var(--line-soft));
+  background: radial-gradient(circle at 50% 34%, color-mix(in oklch, var(--robot) 34%, var(--surface-2)), color-mix(in oklch, var(--robot) 12%, var(--surface-1)) 76%);
+}
+.robot img { width: 86%; height: 86%; object-fit: contain; user-select: none; }
+.robot--full img { width: 80%; height: 80%; }
+.robot--inline { border: 0; background: none; vertical-align: -5px; margin-right: 5px; }
+.robot--inline img { width: 100%; height: 100%; }
 
 /* ------------------------------------------------------------ colonne de gauche */
 .colonne {
