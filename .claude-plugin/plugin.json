@@ -1,6 +1,6 @@
 {
   "name": "ottho-pipeline-mobile",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Ottho Builder Mobile : deux produits dans un plugin. La vue du parcours mobile Ottho (34 étapes, de l'idée à l'application publiée sur l'App Store et Google Play) et le pipeline d'agents SDD mobile (8 agents, 5 phases) pour une application Expo qui se branche sur la base Supabase existante de l'application web du client. L'app locale s'ouvre à côté du terminal au démarrage de Claude Code et montre la vue qui correspond au projet.",
   "author": {
     "name": "Ottho",
